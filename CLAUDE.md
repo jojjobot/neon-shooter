@@ -20,18 +20,38 @@ To play any game: open the `.html` file directly in a browser.
 | File | Description |
 |------|-------------|
 | `tictactoe.html` | 2-player Tic Tac Toe with score tracking. Dark/neon theme (`#1a1a2e` bg, `#e94560` X, `#a8dadc` O). |
-| `shooter_game.html` | 2D side-scrolling Canvas shooter (800×450px). Player: cyan, Enemies: red, Bullets: yellow. Physics with gravity, 5 platforms, enemy AI, particle effects. Game states: start → playing → gameover. |
+| `shooter_game.html` | 2D side-scrolling Canvas shooter (800×450px). Player: cyan. 3 enemy types. Physics with gravity, 6 platforms, particle effects. Game states: start → playing → gameover. |
 
 ## shooter_game.html Architecture
 
 The shooter is driven by a single `requestAnimationFrame` loop calling `update(now)` then `draw()`.
 
 - **Game state machine:** `state` variable — `'start'`, `'playing'`, `'gameover'`
-- **Physics:** `applyPlatformCollisions(obj)` handles gravity landing, head bumps, and world bounds — shared by both player and enemies
-- **Enemy AI:** moves toward player's x each frame; jumps when player is above and `jumpCooldown` allows
-- **Collision:** AABB for player↔enemy and platform landing; circle-AABB (`circleAABB`) for bullet↔enemy
+- **Physics:** `applyPlatformCollisions(obj)` handles gravity landing, head bumps, and world bounds — shared by player and ground-based enemies; flyers skip this and clamp to screen bounds manually
+- **Collision:** AABB for player↔enemy body contact; circle-AABB (`circleAABB`) for bullet↔enemy and enemy bullet↔player
 - **Difficulty scaling:** spawn interval and enemy speed both derived from `score` at runtime
-- **Input:** `keys` object (keydown/keyup), `mouse` position (mousemove), `mousedown` fires bullets and transitions state
+- **Input:** `keys` object (keydown/keyup), `mouse` position (mousemove), `mousedown` fires bullets and transitions state; `keys['Shift']` triggers dash
+
+### Enemy types
+
+| Type | Color | AI | Score |
+|------|-------|----|-------|
+| `grunt` | Red | Walks toward player, jumps when player is above | 10 |
+| `flyer` | Purple | Flies (no gravity/platforms), sine-wave vertical movement, tracks player altitude | 15 |
+| `shooter` | Orange | Maintains ~220px distance, fires projectiles at player every ~2s | 20 |
+
+Enemy types unlock by score: grunts only (<30), grunts+flyers (<80), all three (≥80).
+
+### Player mechanics
+
+- **Weapon cooldown:** `player.shootCooldown` — 18 frames between shots. Enforced in `mousedown`. Green `GUN` bar in HUD.
+- **Dash:** `Shift` key. 10-frame burst at speed 14 in facing direction. Invincible during dash (`dashActive` keeps `invincibleTimer` alive). 90-frame cooldown. Blue `DASH` bar in HUD. Cyan particle trail.
+- **Invincibility:** 120-frame window after any hit (blink effect). Dash also grants brief invincibility.
+
+### Projectiles
+
+- `bullets` — player shots (yellow), speed 12, aimed at mouse cursor
+- `enemyBullets` — shooter enemy shots (orange), speed 5, aimed at player position at fire time
 
 ## Git & GitHub
 
