@@ -26,33 +26,40 @@ window.addEventListener('resize', () => {
 
 // ── Map ───────────────────────────────────────────────────────────────────────
 const MAP = [
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1],
-  [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1],
-  [1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,1],
-  [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1],
-  [1,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,2,2,0,0,0,0,0,2,0,0,0,0,0,0,2,0,0,0,0,0,2,2,0,1],
+  [1,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,2,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,2,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,2,0,0,0,0,0,2,2,2,2,2,2,2,2,0,0,0,0,0,2,0,0,1],
+  [1,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,1],
+  [1,0,0,2,0,0,0,0,0,2,2,2,2,2,2,2,2,0,0,0,0,0,2,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,2,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,2,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,1],
+  [1,0,2,2,0,0,0,0,0,2,0,0,0,0,0,0,2,0,0,0,0,0,2,2,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
 ];
 const MH = MAP.length, MW = MAP[0].length;
 const solid = (x, y) => {
   const mx = Math.floor(x), my = Math.floor(y);
-  return mx < 0 || mx >= MW || my < 0 || my >= MH || MAP[my][mx] === 1;
+  return mx < 0 || mx >= MW || my < 0 || my >= MH || MAP[my][mx] >= 1;
 };
 
 // ── Settings ──────────────────────────────────────────────────────────────────
-const settings = { sensitivity: 0.0028, fov: 1.0, theme: 'default' };
+const settings = { sensitivity: 0.0028, fov: 1.0, theme: 'temple' };
 const themes = {
-  default: { ceil: '#06061a', ceilH: '#0e1040', floor: '#050510', floorH: '#0c0c28', wall: [50, 75, 190], label: 'DEFAULT' },
-  blood:   { ceil: '#120404', ceilH: '#240808', floor: '#0a0202', floorH: '#1c0505', wall: [160, 24, 24], label: 'BLOOD'   },
-  void:    { ceil: '#030308', ceilH: '#0b0820', floor: '#040410', floorH: '#090620', wall: [72, 20, 125],  label: 'VOID'    },
-  toxic:   { ceil: '#030e05', ceilH: '#071a08', floor: '#040e05', floorH: '#081808', wall: [18, 140, 42], label: 'TOXIC'   },
+  temple:  { ceil: '#080604', ceilH: '#120e08', floor: '#100c06', floorH: '#1e1610', wall: [175,140,85],  wall2: [125,95,58],  label: 'TEMPLE'  },
+  default: { ceil: '#06061a', ceilH: '#0e1040', floor: '#050510', floorH: '#0c0c28', wall: [50,75,190],   wall2: [35,55,145],  label: 'DEFAULT' },
+  blood:   { ceil: '#120404', ceilH: '#240808', floor: '#0a0202', floorH: '#1c0505', wall: [160,24,24],   wall2: [115,16,16],  label: 'BLOOD'   },
+  void:    { ceil: '#030308', ceilH: '#0b0820', floor: '#040410', floorH: '#090620', wall: [72,20,125],   wall2: [50,12,90],   label: 'VOID'    },
+  toxic:   { ceil: '#030e05', ceilH: '#071a08', floor: '#040e05', floorH: '#081808', wall: [18,140,42],   wall2: [12,100,28],  label: 'TOXIC'   },
 };
 let settingsOpen = false;
 let menuMouse = { x: W / 2, y: H / 2 };
@@ -60,7 +67,7 @@ let dragging = null; // 'sens' | 'fov'
 
 // ── Player ────────────────────────────────────────────────────────────────────
 const P = {
-  x: 2.5, y: 6,
+  x: 2.5, y: 9,
   dx: 1, dy: 0,       // direction — keep exactly normalized
   cx: 0, cy: 0.75,    // camera plane = perpendicular to dir * fov
   dashTimer: 0, dashCool: 0, dashVx: 0, dashVy: 0,
@@ -204,7 +211,7 @@ function init() {
   enemies = []; eBullets = []; parts = []; pBullets = []; impacts = [];
   portalShot = null; screenShake = 0;
   // Exact normalized direction — prevents crosshair drift
-  P.x = 2.5; P.y = 6; P.dx = 1; P.dy = 0;
+  P.x = 2.5; P.y = 9; P.dx = 1; P.dy = 0;
   P.cx = -P.dy * settings.fov; P.cy = P.dx * settings.fov;
   P.dashTimer = 0; P.dashCool = 0; P.parryTimer = 0; P.parryCool = 0;
   P.invTimer = 0; P.shootCool = 0; P.hp = 100;
@@ -227,14 +234,20 @@ function safePos(cx, cy) {
 }
 
 // ── Waves ─────────────────────────────────────────────────────────────────────
-const SPAWNS = [[17.5,1.5],[17.5,11.5],[1.5,1.5],[1.5,11.5],[10,6],[17.5,6],[1.5,6],[10,1.5],[10,11.5]];
+const SPAWNS = [
+  [24.5,1.5],[24.5,9],[24.5,17.5],
+  [1.5,1.5],[1.5,9],[1.5,17.5],
+  [13,1.5],[13,17.5],
+  [12,9],[14,9],
+  [5,4],[21,4],[5,14],[21,14],
+];
 function spawnWave(n) {
-  wave = n; const count = 3 + n * 2; pending = count;
+  wave = n; const count = 4 + n * 2; pending = count;
   for (let i = 0; i < count; i++) {
     setTimeout(() => {
       if (gs !== 'playing') { pending--; return; }
       const r = Math.random();
-      const type = (n >= 3 && r < 0.25) ? 'bomber' : (n >= 2 && r < 0.55) ? 'shooter' : 'grunt';
+      const type = (n >= 3 && r < 0.30) ? 'bomber' : (n >= 2 && r < 0.50) ? 'shooter' : 'grunt';
       // Bombers spawn from the far half of spawn points (away from player)
       const pool = type === 'bomber'
         ? [...SPAWNS].sort((a, b) => dst2(b[0],b[1],P.x,P.y) - dst2(a[0],a[1],P.x,P.y)).slice(0, Math.ceil(SPAWNS.length / 2))
@@ -243,10 +256,10 @@ function spawnWave(n) {
       const [ex, ey] = safePos(sp[0] + rnd(-0.4, 0.4), sp[1] + rnd(-0.4, 0.4));
       enemies.push({
         x: ex, y: ey, type, dead: false,
-        hp: type === 'bomber' ? 130 : type === 'shooter' ? 60 : 40,
-        maxHp: type === 'bomber' ? 130 : type === 'shooter' ? 60 : 40,
-        spd: type === 'bomber' ? 0.030 : type === 'shooter' ? 0.025 : 0.035 + n * 0.002,
-        sTimer: type === 'shooter' ? rnd(80, 120) : 0, stagger: 0, animT: Math.random() * 60 | 0,
+        hp: type === 'bomber' ? 130 : type === 'shooter' ? 75 : 55,
+        maxHp: type === 'bomber' ? 130 : type === 'shooter' ? 75 : 55,
+        spd: type === 'bomber' ? 0.033 : type === 'shooter' ? 0.028 : 0.042 + n * 0.002,
+        sTimer: type === 'shooter' ? rnd(60, 100) : 0, stagger: 0, animT: Math.random() * 60 | 0,
         id: Math.random(),
         path: [], pathTimer: Math.random() * 30 | 0,
       });
@@ -335,7 +348,7 @@ function rotate(a) {
 
 // ── Pathfinding (A*) — 0.5-unit grid for smoother, more varied routes ────────
 const GRID_RES = 0.5;
-const GW = Math.round(MW / GRID_RES); // grid cols = 40
+const GW = Math.round(MW / GRID_RES); // grid cols = 52
 
 function aStar(sx, sy, gx, gy, seed) {
   // Convert world pos → grid cell index
@@ -344,7 +357,7 @@ function aStar(sx, sy, gx, gy, seed) {
   const solidG = (cx, cy) => {
     const mx = Math.floor(cx * GRID_RES + GRID_RES * 0.5);
     const my = Math.floor(cy * GRID_RES + GRID_RES * 0.5);
-    return MAP[my]?.[mx] === 1;
+    return MAP[my]?.[mx] >= 1;
   };
 
   const osx = toG(sx), osy = toG(sy);
@@ -506,15 +519,15 @@ function update() {
       if (dd < 0.65) { explodeBomber(e); e.dead = true; score += 15; SM.add(50); }
     } else {
       // Recalculate path when too far and path is stale
-      if (dd > 5.5 && e.pathTimer <= 0) {
+      if (dd > 7.0 && e.pathTimer <= 0) {
         e.path = smoothPath(aStar(e.x, e.y, P.x, P.y, e.id));
         e.pathTimer = 45 + (Math.random() * 20 | 0);
       }
-      if (dd < 4.0) {
+      if (dd < 4.5) {
         // Too close — back away directly with radius collision
         moveEntity(e, -dirx * e.spd, -diry * e.spd);
         e.path = [];
-      } else if (dd > 5.5) {
+      } else if (dd > 7.0) {
         // Too far — follow A* path
         followPath(e);
       } else {
@@ -522,7 +535,7 @@ function update() {
         moveEntity(e, -diry * e.spd, dirx * e.spd);
       }
       if (--e.sTimer <= 0) {
-        e.sTimer = rnd(70, 110);
+        e.sTimer = rnd(55, 90);
         const sd = Math.hypot(ddx, ddy) || 1;
         eBullets.push({ x: e.x, y: e.y, vx: ddx / sd * 0.06, vy: ddy / sd * 0.06, life: 200, parried: false });
       }
@@ -609,8 +622,6 @@ function drawWorld() {
   const fg = ctx.createLinearGradient(0, H / 2, 0, H);
   fg.addColorStop(0, th.floorH); fg.addColorStop(1, th.floor);
   ctx.fillStyle = fg; ctx.fillRect(0, H / 2, W, H / 2);
-  const [wr, wg, wb] = th.wall;
-
   for (let col = 0; col < RAYS; col++) {
     const camX = 2 * col / RAYS - 1;
     const rdx = P.dx + P.cx * camX;
@@ -627,8 +638,9 @@ function drawWorld() {
     while (true) {
       if (sdx < sdy) { sdx += ddx; mapX += sx; side = 0; }
       else           { sdy += ddy; mapY += sy; side = 1; }
-      if (MAP[mapY]?.[mapX] === 1) break;
+      if (MAP[mapY]?.[mapX] >= 1) break;
     }
+    const [wr, wg, wb] = MAP[mapY][mapX] === 2 ? th.wall2 : th.wall;
 
     const perp = side === 0
       ? (mapX - P.x + (1 - sx) / 2) / rdx
