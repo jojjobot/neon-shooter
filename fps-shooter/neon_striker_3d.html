@@ -675,8 +675,10 @@ function drawSprites() {
     const x0 = Math.max(0, (scrX - sprW / 2) | 0);
     const x1 = Math.min(W - 1, (scrX + sprW / 2) | 0);
     const groundRow = ((H / 2 + H / (2 * tz)) | 0);
-    const y0 = Math.max(0, groundRow - sprH);
-    const y1 = Math.min(H - 1, groundRow);
+    const centerRow = (H / 2) | 0;
+    const anchorRow = spr.human ? groundRow : centerRow;
+    const y0 = Math.max(0, anchorRow - sprH);
+    const y1 = Math.min(H - 1, anchorRow);
 
     if (spr.human && sprH > 4) {
       const isBomber = spr.etype === 'bomber';
