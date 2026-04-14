@@ -1,0 +1,160 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserTier {
+  FREE
+  PRO
+  GOLD_GOBLIN
+}
+
+enum SubscriptionStatus {
+  active
+  canceled
+  past_due
+  trialing
+  incomplete
+  incomplete_expired
+  unpaid
+}
+
+model Item {
+  id          Int      @id
+  name        String
+  iconUrl     String?
+  category    String   @default("Miscellaneous")
+  createdAt   DateTime @default(now())
+
+  snapshots    AuctionSnapshot[]
+  priceHistory PriceHistory[]
+  watchlists   Watchlist[]
+  alerts       Alert[]
+
+  @@map("items")
+}
+
+model Realm {
+  id               Int      @id
+  name             String
+  slug             String
+  region           String   @default("US")
+  connectedRealmId Int
+  isTracked        Boolean  @default(false)
+  lastSnapshotAt   DateTime?
+  createdAt        DateTime @default(now())
+
+  snapshots    AuctionSnapshot[]
+  priceHistory PriceHistory[]
+  watchlists   Watchlist[]
+
+  @@map("realms")
+}
+
+model AuctionSnapshot {
+  id          Int      @id @default(autoincrement())
+  realmId     Int
+  itemId      Int
+  timestamp   DateTime @default(now())
+  minBuyout   BigInt
+  quantity    Int
+  numAuctions Int
+
+  realm Realm @relation(fields: [realmId], references: [id])
+  item  Item  @relation(fields: [itemId], references: [id])
+
+  @@index([realmId, itemId, timestamp])
+  @@map("auction_snapshots")
+}
+
+model PriceHistory {
+  id      Int      @id @default(autoincrement())
+  itemId  Int
+  realmId Int?
+  date    DateTime @db.Date
+  open    BigInt
+  high    BigInt
+  low     BigInt
+  close   BigInt
+  volume  Int
+
+  item  Item   @relation(fields: [itemId], references: [id])
+  realm Realm? @relation(fields: [realmId], references: [id])
+
+  @@unique([itemId, realmId, date])
+  @@index([itemId, realmId, date])
+  @@map("price_history")
+}
+
+model User {
+  id             String   @id
+  email          String   @unique
+  tier           UserTier @default(FREE)
+  discordWebhook String?
+  apiKey         String?  @unique
+  createdAt      DateTime @default(now())
+
+  watchlists    Watchlist[]
+  alerts        Alert[]
+  subscriptions Subscription[]
+
+  @@map("users")
+}
+
+model Watchlist {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  itemId      Int
+  realmId     Int?
+  targetPrice BigInt
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  item   Item   @relation(fields: [itemId], references: [id])
+  realm  Realm? @relation(fields: [realmId], references: [id])
+  alerts Alert[]
+
+  @@index([userId, isActive])
+  @@map("watchlists")
+}
+
+model Alert {
+  id           Int      @id @default(autoincrement())
+  userId       String
+  watchlistId  Int
+  itemId       Int
+  triggeredAt  DateTime @default(now())
+  currentPrice BigInt
+  sentEmail    Boolean  @default(false)
+  sentDiscord  Boolean  @default(false)
+
+  user      User      @relation(fields: [userId], references: [id])
+  watchlist Watchlist @relation(fields: [watchlistId], references: [id])
+  item      Item      @relation(fields: [itemId], references: [id])
+
+  @@index([userId, triggeredAt])
+  @@map("alerts")
+}
+
+model Subscription {
+  id                   Int                @id @default(autoincrement())
+  userId               String
+  stripeCustomerId     String
+  stripePriceId        String
+  stripeSubscriptionId String             @unique
+  status               SubscriptionStatus
+  currentPeriodEnd     DateTime
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("subscriptions")
+}

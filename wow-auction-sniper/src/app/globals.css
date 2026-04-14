@@ -1,0 +1,182 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #0d1117;
+  --bg-card: #161b22;
+  --accent-gold: #c8a84b;
+  --accent-gold-light: #e8c86b;
+  --text-primary: #e6e6e6;
+  --text-muted: #8b949e;
+  --border-color: #30363d;
+  --green: #3fb950;
+  --red: #f85149;
+  --blue: #58a6ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-gold);
+}
+
+/* WoW gold text utility */
+.text-gold {
+  color: var(--accent-gold);
+}
+
+/* Card styles */
+.wow-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+/* Gold glow effect */
+.gold-glow {
+  box-shadow: 0 0 20px rgba(200, 168, 75, 0.25);
+}
+
+/* Table styles */
+.wow-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.wow-table th {
+  background-color: #0d1117;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+.wow-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #21262d;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+.wow-table tr:last-child td {
+  border-bottom: none;
+}
+.wow-table tbody tr:hover {
+  background-color: rgba(200, 168, 75, 0.04);
+}
+
+/* Badge styles */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.badge-gold {
+  background-color: rgba(200, 168, 75, 0.15);
+  color: var(--accent-gold);
+  border: 1px solid rgba(200, 168, 75, 0.3);
+}
+.badge-green {
+  background-color: rgba(63, 185, 80, 0.1);
+  color: var(--green);
+  border: 1px solid rgba(63, 185, 80, 0.3);
+}
+.badge-red {
+  background-color: rgba(248, 81, 73, 0.1);
+  color: var(--red);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+}
+.badge-blue {
+  background-color: rgba(88, 166, 255, 0.1);
+  color: var(--blue);
+  border: 1px solid rgba(88, 166, 255, 0.3);
+}
+
+/* Button styles */
+.btn-primary {
+  background-color: var(--accent-gold);
+  color: #0d1117;
+  font-weight: 700;
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-primary:hover {
+  background-color: var(--accent-gold-light);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--accent-gold);
+  font-weight: 600;
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: 1px solid var(--accent-gold);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-secondary:hover {
+  background-color: rgba(200, 168, 75, 0.1);
+}
+
+/* Animated gradient background for hero */
+.hero-bg {
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(200, 168, 75, 0.05) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(88, 166, 255, 0.04) 0%, transparent 50%),
+    #0d1117;
+}
+
+/* Price formatting colors */
+.price-gold { color: #ffd700; }
+.price-silver { color: #c0c0c0; }
+.price-copper { color: #b87333; }
+
+/* Recharts dark theme override */
+.recharts-cartesian-grid line {
+  stroke: #21262d !important;
+}
+.recharts-text {
+  fill: #8b949e !important;
+}

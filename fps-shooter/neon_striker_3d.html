@@ -199,6 +199,7 @@ const SM = {
 let gs = 'start';
 let score = 0, wave = 0, waveCD = 0, pending = 0;
 let enemies = [], eBullets = [], parts = [], pBullets = [], impacts = [];
+let hitMarker = 0; // frames to show hit crosshair flash
 let weapon = 1; // 1 = pistol, 2 = portal gun
 let portalShot = null;
 let screenShake = 0;
@@ -209,7 +210,7 @@ const dst2 = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
 function init() {
   gs = 'playing'; score = 0; wave = 0; waveCD = 0; pending = 0;
   enemies = []; eBullets = []; parts = []; pBullets = []; impacts = [];
-  portalShot = null; screenShake = 0;
+  portalShot = null; screenShake = 0; hitMarker = 0;
   // Exact normalized direction — prevents crosshair drift
   P.x = 2.5; P.y = 9; P.dx = 1; P.dy = 0;
   P.cx = -P.dy * settings.fov; P.cy = P.dx * settings.fov;
@@ -247,7 +248,7 @@ function spawnWave(n) {
     setTimeout(() => {
       if (gs !== 'playing') { pending--; return; }
       const r = Math.random();
-      const type = (n >= 3 && r < 0.30) ? 'bomber' : (n >= 2 && r < 0.50) ? 'shooter' : 'grunt';
+      const type = (n >= 3 && r < 0.25) ? 'bomber' : (n >= 4 && r < 0.45) ? 'burster' : (n >= 2 && r < 0.55) ? 'shooter' : 'grunt';
       // Bombers spawn from the far half of spawn points (away from player)
       const pool = type === 'bomber'
         ? [...SPAWNS].sort((a, b) => dst2(b[0],b[1],P.x,P.y) - dst2(a[0],a[1],P.x,P.y)).slice(0, Math.ceil(SPAWNS.length / 2))
@@ -256,10 +257,12 @@ function spawnWave(n) {
       const [ex, ey] = safePos(sp[0] + rnd(-0.4, 0.4), sp[1] + rnd(-0.4, 0.4));
       enemies.push({
         x: ex, y: ey, type, dead: false,
-        hp: type === 'bomber' ? 130 : type === 'shooter' ? 75 : 55,
-        maxHp: type === 'bomber' ? 130 : type === 'shooter' ? 75 : 55,
-        spd: type === 'bomber' ? 0.033 : type === 'shooter' ? 0.028 : 0.042 + n * 0.002,
-        sTimer: type === 'shooter' ? rnd(60, 100) : 0, stagger: 0, animT: Math.random() * 60 | 0,
+        hp: type === 'bomber' ? 130 : type === 'shooter' ? 75 : type === 'burster' ? 65 : 55,
+        maxHp: type === 'bomber' ? 130 : type === 'shooter' ? 75 : type === 'burster' ? 65 : 55,
+        spd: type === 'bomber' ? 0.033 : type === 'shooter' ? 0.028 : type === 'burster' ? 0.022 : 0.042 + n * 0.002,
+        sTimer: (type === 'shooter' || type === 'burster') ? rnd(60, 100) : 0,
+        burstCount: type === 'burster' ? 3 : 0,
+        stagger: 0, animT: Math.random() * 60 | 0,
         id: Math.random(),
         path: [], pathTimer: Math.random() * 30 | 0,
       });
@@ -289,17 +292,50 @@ function killEnemy(e) {
     score += 30; SM.add(80);
     explodeBomber(e);
   } else {
-    score += e.type === 'shooter' ? 20 : 10;
-    SM.add(e.type === 'shooter' ? 65 : 40);
-    P.hp = Math.min(P.maxHp, P.hp + (e.type === 'shooter' ? 20 : 12));
-    burst3d(e.x, e.y, e.type === 'shooter' ? '#f80' : '#f44', 10);
+    score += e.type === 'shooter' ? 20 : e.type === 'burster' ? 25 : 10;
+    SM.add(e.type === 'shooter' ? 65 : e.type === 'burster' ? 70 : 40);
+    P.hp = Math.min(P.maxHp, P.hp + (e.type === 'shooter' ? 20 : e.type === 'burster' ? 16 : 12));
+    burst3d(e.x, e.y, e.type === 'shooter' ? '#f80' : e.type === 'burster' ? '#4f8' : '#f44', 10);
   }
 }
 
 function playerShoot() {
   if (P.shootCool > 0) return;
   P.shootCool = 12; SM.add(2);
-  pBullets.push({ x: P.x + P.dx * 0.5, y: P.y + P.dy * 0.5, vx: P.dx * 0.38, vy: P.dy * 0.38, life: 55 });
+
+  const rdx = P.dx, rdy = P.dy;
+
+  // Find closest enemy whose center is within ~0.4 units of the ray
+  let bestT = Infinity, bestEnemy = null;
+  for (const e of enemies) {
+    if (e.dead) continue;
+    const t = (e.x - P.x) * rdx + (e.y - P.y) * rdy;
+    if (t <= 0.2) continue;
+    const cpx = P.x + t * rdx, cpy = P.y + t * rdy;
+    if (Math.hypot(e.x - cpx, e.y - cpy) < 0.42 && t < bestT) {
+      bestT = t; bestEnemy = e;
+    }
+  }
+
+  // March ray to find first wall
+  let wallT = 40;
+  for (let t = 0.2; t < 40; t += 0.08) {
+    if (solid(P.x + rdx * t, P.y + rdy * t)) { wallT = t; break; }
+  }
+
+  if (bestEnemy && bestT < wallT) {
+    // Enemy hit
+    bestEnemy.hp -= 25; bestEnemy.stagger = 15; SM.add(15);
+    const hx = P.x + rdx * bestT, hy = P.y + rdy * bestT;
+    impacts.push({ x: hx, y: hy, life: 9, maxLife: 9, col: '#fff' });
+    burst3d(hx, hy, '#ff8', 6);
+    if (bestEnemy.hp <= 0) killEnemy(bestEnemy);
+    hitMarker = 14; // flash crosshair red
+  } else {
+    // Wall impact spark
+    const hx = P.x + rdx * (wallT - 0.08), hy = P.y + rdy * (wallT - 0.08);
+    impacts.push({ x: hx, y: hy, life: 9, maxLife: 9, col: '#ff8' });
+  }
 }
 
 function shootPortal() {
@@ -488,6 +524,7 @@ function update() {
   if (P.shootCool > 0) P.shootCool--;
   if (P.parryCool > 0) P.parryCool--;
   if (P.parryTimer > 0) P.parryTimer--;
+  if (hitMarker   > 0) hitMarker--;
 
   if (lmbDown) { if (weapon === 1) playerShoot(); else if (weapon === 2 && !portalShot) shootPortal(); }
 
@@ -517,7 +554,7 @@ function update() {
       }
       followPath(e);
       if (dd < 0.65) { explodeBomber(e); e.dead = true; score += 15; SM.add(50); }
-    } else {
+    } else if (e.type === 'shooter') {
       // Recalculate path when too far and path is stale
       if (dd > 7.0 && e.pathTimer <= 0) {
         e.path = smoothPath(aStar(e.x, e.y, P.x, P.y, e.id));
@@ -538,6 +575,36 @@ function update() {
         e.sTimer = rnd(55, 90);
         const sd = Math.hypot(ddx, ddy) || 1;
         eBullets.push({ x: e.x, y: e.y, vx: ddx / sd * 0.06, vy: ddy / sd * 0.06, life: 200, parried: false });
+      }
+    } else if (e.type === 'burster') {
+      // Burster — slow walker, fires a burst of 3 fast shots then reloads
+      if (e.pathTimer <= 0) {
+        e.path = smoothPath(aStar(e.x, e.y, P.x, P.y, e.id));
+        e.pathTimer = 50 + (Math.random() * 25 | 0);
+      }
+      followPath(e);
+      if (--e.sTimer <= 0) {
+        const sd = Math.hypot(ddx, ddy) || 1;
+        // Spread angle for outer shots: ~8 degrees
+        const spread = 0.14;
+        const cos = Math.cos(spread), sin = Math.sin(spread);
+        const bx = ddx / sd, by = ddy / sd;
+        const shots = [
+          { vx: bx,                     vy: by },
+          { vx: bx * cos - by * sin,    vy: bx * sin + by * cos },
+          { vx: bx * cos + by * sin,    vy: -bx * sin + by * cos },
+        ];
+        // Fire one shot per burst step; when burstCount hits 0 reload
+        const shotIdx = 3 - e.burstCount;
+        const s = shots[shotIdx] || shots[0];
+        eBullets.push({ x: e.x, y: e.y, vx: s.vx * 0.11, vy: s.vy * 0.11, life: 220, parried: false, burster: true });
+        e.burstCount--;
+        if (e.burstCount > 0) {
+          e.sTimer = 7; // fast inter-burst gap
+        } else {
+          e.sTimer = rnd(70, 110); // reload
+          e.burstCount = 3;
+        }
       }
     }
   }
@@ -609,6 +676,129 @@ function update() {
   if (waveCD > 0) { waveCD--; if (waveCD === 1) spawnWave(wave + 1); }
 }
 
+// ── Stone wall texture (procedural, from stone_wall.mtl colors) ───────────────
+const TEX_SIZE = 512;
+const STONE_TEX = (() => {
+  const tc = document.createElement('canvas');
+  tc.width = tc.height = TEX_SIZE;
+  const tx = tc.getContext('2d');
+
+  const C_MORTAR = [138, 125, 102];
+  const C_STONE  = [115,  97,  77];
+  const C_MOSS   = [ 66,  99,  46];
+
+  // Seeded RNG — deterministic, reproducible texture
+  let rseed = 42;
+  const rng = () => { rseed = (rseed * 1664525 + 1013904223) & 0xffffffff; return (rseed >>> 0) / 0xffffffff; };
+
+  // Mortar background with subtle pixel noise baked in later
+  tx.fillStyle = `rgb(${C_MORTAR[0]},${C_MORTAR[1]},${C_MORTAR[2]})`;
+  tx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+
+  const MORTAR_H = 4, MORTAR_V = 3;
+  const ROW_H = 28;
+  const rows = Math.ceil(TEX_SIZE / ROW_H) + 1;
+
+  for (let row = 0; row < rows; row++) {
+    const y0 = row * ROW_H + MORTAR_H;
+    const y1 = y0 + ROW_H - MORTAR_H;
+    const bh = y1 - y0;
+    const offset = row % 2 === 0 ? 0 : 48 + (rng() * 20) | 0;
+    let x = -offset;
+    while (x < TEX_SIZE) {
+      const bw = 52 + (rng() * 36) | 0;
+      const x0 = x + MORTAR_V;
+      const x1 = x + bw;
+      const isMoss = rng() < 0.20;
+      const [br, bg, bb] = isMoss ? C_MOSS : C_STONE;
+      // Per-brick brightness + slight warm/cool tint shift
+      const v   = 0.84 + rng() * 0.30;
+      const rt  = 1 + (rng() - 0.5) * 0.08; // slight red shift
+      const bt  = 1 + (rng() - 0.5) * 0.08; // slight blue shift
+      tx.fillStyle = `rgb(${Math.min(255,(br*v*rt)|0)},${(bg*v)|0},${Math.min(255,(bb*v*bt)|0)})`;
+      tx.fillRect(x0, y0, x1 - x0, bh);
+
+      // Top-edge highlight (catches light from above)
+      const hl = tx.createLinearGradient(0, y0, 0, y0 + Math.min(5, bh));
+      hl.addColorStop(0, 'rgba(255,255,255,0.13)');
+      hl.addColorStop(1, 'rgba(255,255,255,0)');
+      tx.fillStyle = hl; tx.fillRect(x0, y0, x1 - x0, Math.min(5, bh));
+
+      // Bottom-edge shadow
+      const sh = tx.createLinearGradient(0, y1 - Math.min(5, bh), 0, y1);
+      sh.addColorStop(0, 'rgba(0,0,0,0)');
+      sh.addColorStop(1, 'rgba(0,0,0,0.18)');
+      tx.fillStyle = sh; tx.fillRect(x0, y1 - Math.min(5, bh), x1 - x0, Math.min(5, bh));
+
+      // Left-edge ambient shadow
+      const lsh = tx.createLinearGradient(x0, 0, x0 + Math.min(10, x1 - x0), 0);
+      lsh.addColorStop(0, 'rgba(0,0,0,0.20)');
+      lsh.addColorStop(1, 'rgba(0,0,0,0)');
+      tx.fillStyle = lsh; tx.fillRect(x0, y0, Math.min(10, x1 - x0), bh);
+
+      // Cracks — zig-zag with occasional branch
+      if (rng() < 0.50) {
+        tx.strokeStyle = `rgba(0,0,0,${0.15 + rng() * 0.15})`;
+        tx.lineWidth = 1;
+        tx.beginPath();
+        const csx = x0 + 4 + (rng() * (x1 - x0 - 8)) | 0;
+        let cy = y0 + 3, cx2 = csx;
+        tx.moveTo(cx2, cy);
+        const segs = 2 + (rng() * 2 | 0);
+        for (let s = 0; s < segs; s++) {
+          cx2 += ((rng() - 0.5) * 6) | 0;
+          cy  += ((bh - 6) / segs) | 0;
+          tx.lineTo(Math.max(x0+1, Math.min(x1-1, cx2)), cy);
+        }
+        tx.stroke();
+        // Small branch off the crack
+        if (rng() < 0.35) {
+          tx.beginPath();
+          tx.moveTo(cx2, cy - 4);
+          tx.lineTo(cx2 + ((rng() - 0.5) * 12) | 0, cy - 4 + (rng() * 8 | 0));
+          tx.stroke();
+        }
+      }
+
+      // Pitting — a few dark speckles scattered on face
+      tx.fillStyle = 'rgba(0,0,0,0.18)';
+      const pits = rng() * 4 | 0;
+      for (let p = 0; p < pits; p++) {
+        const px = x0 + 2 + (rng() * (x1 - x0 - 4)) | 0;
+        const py = y0 + 2 + (rng() * (bh - 4)) | 0;
+        const pr = 0.5 + rng() * 1.5;
+        tx.beginPath(); tx.arc(px, py, pr, 0, Math.PI * 2); tx.fill();
+      }
+
+      x += bw;
+    }
+  }
+
+  // Per-pixel grain — breaks up flat fills so close-up stretching looks rough
+  const imgData = tx.getImageData(0, 0, TEX_SIZE, TEX_SIZE);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const n = (rng() - 0.5) * 32;
+    d[i]   = Math.max(0, Math.min(255, d[i]   + n));
+    d[i+1] = Math.max(0, Math.min(255, d[i+1] + n));
+    d[i+2] = Math.max(0, Math.min(255, d[i+2] + n));
+  }
+  tx.putImageData(imgData, 0, 0);
+
+  return tc;
+})();
+
+// Second texture for wall type 2 — same bricks, mossy tint
+const STONE_TEX2 = (() => {
+  const tc = document.createElement('canvas');
+  tc.width = tc.height = TEX_SIZE;
+  const tx = tc.getContext('2d');
+  tx.drawImage(STONE_TEX, 0, 0);
+  tx.fillStyle = 'rgba(30,60,10,0.35)';
+  tx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+  return tc;
+})();
+
 // ── Raycaster ─────────────────────────────────────────────────────────────────
 const STRIP = 2;
 let RAYS = Math.ceil(W / STRIP);
@@ -622,6 +812,10 @@ function drawWorld() {
   const fg = ctx.createLinearGradient(0, H / 2, 0, H);
   fg.addColorStop(0, th.floorH); fg.addColorStop(1, th.floor);
   ctx.fillStyle = fg; ctx.fillRect(0, H / 2, W, H / 2);
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'medium';
+
   for (let col = 0; col < RAYS; col++) {
     const camX = 2 * col / RAYS - 1;
     const rdx = P.dx + P.cx * camX;
@@ -640,7 +834,6 @@ function drawWorld() {
       else           { sdy += ddy; mapY += sy; side = 1; }
       if (MAP[mapY]?.[mapX] >= 1) break;
     }
-    const [wr, wg, wb] = MAP[mapY][mapX] === 2 ? th.wall2 : th.wall;
 
     const perp = side === 0
       ? (mapX - P.x + (1 - sx) / 2) / rdx
@@ -649,11 +842,22 @@ function drawWorld() {
     const lineH = Math.floor(H / perp);
     const drawS = Math.max(0, (H / 2 - lineH / 2) | 0);
     const drawE = Math.min(H - 1, (H / 2 + lineH / 2) | 0);
-
-    const bright = Math.min(1, 1.2 / (perp * 0.35 + 0.15)) * (side ? 0.55 : 1);
-    ctx.fillStyle = `rgb(${(wr*bright)|0},${(wg*bright)|0},${(wb*bright)|0})`;
     const px = col * STRIP;
+
+    // Texture UV: which column of the texture to sample
+    let wallX = side === 0 ? P.y + perp * rdy : P.x + perp * rdx;
+    wallX -= Math.floor(wallX);
+    let texX = Math.floor(wallX * TEX_SIZE);
+    if ((side === 0 && rdx > 0) || (side === 1 && rdy < 0)) texX = TEX_SIZE - texX - 1;
+
+    const tex = MAP[mapY][mapX] === 2 ? STONE_TEX2 : STONE_TEX;
+    ctx.drawImage(tex, texX, 0, 1, TEX_SIZE, px, drawS, STRIP, drawE - drawS);
+
+    // Darken for distance and side-face shading
+    const bright = Math.min(1, 1.2 / (perp * 0.35 + 0.15)) * (side ? 0.55 : 1);
+    ctx.fillStyle = `rgba(0,0,0,${(1 - bright).toFixed(3)})`;
     ctx.fillRect(px, drawS, STRIP, drawE - drawS);
+
     for (let i = 0; i < STRIP && px + i < W; i++) zBuf[px + i] = perp;
   }
 }
@@ -662,12 +866,12 @@ function drawWorld() {
 function drawSprites() {
   const list = [];
   for (const e of enemies) {
-    const col = e.type === 'bomber' ? '#e04010' : e.type === 'shooter' ? '#1a5fe0' : '#cc1a2e';
-    const sc  = e.type === 'bomber' ? 0.74 : e.type === 'shooter' ? 0.65 : 0.60;
+    const col = e.type === 'bomber' ? '#e04010' : e.type === 'shooter' ? '#1a5fe0' : e.type === 'burster' ? '#1a8c35' : '#cc1a2e';
+    const sc  = e.type === 'bomber' ? 0.74 : e.type === 'shooter' ? 0.65 : e.type === 'burster' ? 0.62 : 0.60;
     const closeRatio = e.type === 'bomber' ? Math.max(0, 1 - dst2(e.x, e.y, P.x, P.y) / 4.0) : 0;
     list.push({ x: e.x, y: e.y, col, sc, hp: e.hp, maxHp: e.maxHp, stagger: e.stagger, human: true, etype: e.type, animT: e.animT, shooting: e.sTimer < 22, closeRatio });
   }
-  for (const b of eBullets) list.push({ x: b.x, y: b.y, col: b.parried ? '#0ff' : '#f80', sc: 0.22 });
+  for (const b of eBullets) list.push({ x: b.x, y: b.y, col: b.parried ? '#0ff' : b.burster ? '#4f8' : '#f80', sc: 0.22 });
   for (const b of pBullets) list.push({ x: b.x, y: b.y, col: '#ff4', sc: 0.12 });
   for (const i of impacts)  list.push({ x: i.x, y: i.y, col: i.col, sc: 0.30 * (i.life / i.maxLife) });
   if (portalShot) list.push({ x: portalShot.x, y: portalShot.y, col: '#00eeff', sc: 0.22 });
@@ -710,7 +914,7 @@ function drawSprites() {
       const yLegs  = yBase + headH + bodyH;
       const visorY = yBase + ((headH * 0.28) | 0);
       const visorH = Math.max(1, (headH * 0.30) | 0);
-      const visorCol = isBomber ? '#ff2200' : spr.etype === 'shooter' ? '#ffe040' : '#f020c0';
+      const visorCol = isBomber ? '#ff2200' : spr.etype === 'shooter' ? '#ffe040' : spr.etype === 'burster' ? '#80ff40' : '#f020c0';
       const spanX  = Math.max(x1 - x0, 1);
 
       for (let x = x0; x < x1; x++) {
@@ -757,15 +961,15 @@ function drawSprites() {
           if (xt >= 0.08 && xt <= 0.92) {
             ctx.fillStyle = spr.col; ctx.fillRect(x, yBody, 1, bodyH);
             if (xt >= 0.28 && xt <= 0.72) {
-              ctx.fillStyle = spr.etype === 'shooter' ? '#020510' : '#100202';
+              ctx.fillStyle = spr.etype === 'shooter' ? '#020510' : spr.etype === 'burster' ? '#021005' : '#100202';
               ctx.fillRect(x, yBody+((bodyH*0.16)|0), 1, (bodyH*0.58)|0);
               if (xt >= 0.43 && xt <= 0.57) { ctx.fillStyle=visorCol; ctx.fillRect(x,yBody+((bodyH*0.32)|0),1,(bodyH*0.22)|0); }
             }
             if (xt <= 0.26) { ctx.globalAlpha=0.26*(1-xt/0.26); ctx.fillStyle='#fff'; ctx.fillRect(x,yBody,1,bodyH); ctx.globalAlpha=1; }
             if (xt >= 0.74) { ctx.globalAlpha=0.34*((xt-0.74)/0.18); ctx.fillStyle='#000'; ctx.fillRect(x,yBody,1,bodyH); ctx.globalAlpha=1; }
           }
-          // ── Shooter gun arm ──
-          if (spr.etype === 'shooter' && xt >= 0.86 && xt <= 1.0) {
+          // ── Shooter / burster gun arm ──
+          if ((spr.etype === 'shooter' || spr.etype === 'burster') && xt >= 0.86 && xt <= 1.0) {
             const gunRaise = spr.shooting ? ((bodyH*0.22)|0) : 0;
             ctx.fillStyle = spr.col; ctx.fillRect(x, yBody+((bodyH*0.10)|0)-gunRaise, 1, (bodyH*0.28)|0);
           }
@@ -794,10 +998,16 @@ function drawHUD() {
 
   // Crosshair — always perfectly centered
   const cx = W / 2, cy = H / 2, cs = 9;
-  ctx.strokeStyle = P.parryTimer > 0 ? '#0ff' : '#ffffff99';
-  ctx.lineWidth = 1.5;
+  const hitFrac = hitMarker / 14;
+  const crossCol = P.parryTimer > 0 ? '#0ff'
+    : hitMarker > 0 ? `rgba(255,${(80 + 80 * (1 - hitFrac)) | 0},0,${0.6 + 0.4 * hitFrac})`
+    : '#ffffff99';
+  ctx.strokeStyle = crossCol;
+  ctx.lineWidth = hitMarker > 0 ? 2 + hitFrac * 1.5 : 1.5;
+  if (hitMarker > 0) { ctx.shadowBlur = 10 * hitFrac; ctx.shadowColor = '#ff4400'; }
   ctx.beginPath(); ctx.moveTo(cx - cs, cy); ctx.lineTo(cx + cs, cy); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(cx, cy - cs); ctx.lineTo(cx, cy + cs); ctx.stroke();
+  ctx.shadowBlur = 0;
   if (P.parryTimer > 0) {
     ctx.strokeStyle = '#0ff'; ctx.lineWidth = 2;
     ctx.globalAlpha = P.parryTimer / 17;
